@@ -1,0 +1,240 @@
+<html>
+
+<!--
+參考網站:https://www.w3schools.com/jsref/met_win_setinterval.asp?msclkid=8477e7deb26011eca802f226eb3b6d12
+參考網站:https://medium.com/canal-tech/how-video-streaming-works-on-the-web-an-introduction-7919739f7e1
+參考網站:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer
+參考網站:https://developer.mozilla.org/zh-TW/docs/Web/API/MediaSource/MediaSource
+參考網站:http://nickdesaulniers.github.io/netfix/demo/bufferAll.html
+參考網站:https://www.videoconverterfactory.com/tips/check-video-codec.html
+參考網站:https://cconcolato.github.io/media-mime-support/
+重要參考網站  
+https://stackoverflow.com/questions/45867579/mediasource-closed-after-appendbuffer  ,
+https://stackoverflow-com.translate.goog/questions/14108536/how-do-i-append-two-video-files-data-to-a-source-buffer-using-media-source-api/?_x_tr_sl=en&_x_tr_tl=zh-TW&_x_tr_hl=zh-TW&_x_tr_pto=sc
+ffmpeg -i in.mp4 -c copy -movflags frag_keyframe+empty_moov+default_base_moof out.mp4
+-->
+
+
+<head>
+
+<title>Ajax</title>
+
+<style>
+input[type="range"]{
+  width:30vw;
+  height:30px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<video controls="true" autoplay="true" name="media"  width="600" height="600" id="my-video" autoplay="autoplay"></video>
+
+<br>
+<div id="h" style="display:none;">{{camera_data["height"]}}</div> 
+<div id="w" style="display:none;">{{camera_data["width"]}}</div> 
+
+Suggest opening with Chrome browser. <br> 
+Need to open with "Main.py",and it will run "Server Funtion" and "Camera Funtion". <br>
+Need to run  with "Server Funtion" by using Flask module. <br> 
+Need to run  with "Camera Funtion" by using OpenCV and DroidCam. <br>
+
+Origin Size: Height={{camera_data["height"]}} , Width={{camera_data["width"]}} px. <br> 
+
+Height:<input type="text" id="Height" name="Height" value="">
+Width:<input type="text" id="Width" name="Width" value="">
+
+<button onclick="Stream()">直播中</button>
+
+&nbsp;&nbsp;
+
+<button onclick="Play()" id="Play">Play</button>
+
+&nbsp;&nbsp;
+
+<button onclick="Pause()">Pause</button>
+
+&nbsp;&nbsp;
+
+<button onclick="Stop()" id="Stop">Stop</button>
+
+&nbsp;&nbsp; 
+
+<div style="display: none;" id="HostPort">{{camera_data["url"]}}</div> <!-- It will like this format: HOST:PORT, Example: 127.0.0.1:8080 -->
+<button onclick="window.location.href='http://'+document.getElementById('HostPort').innerHTML+'/shutdown';">Shutdown Server</button>  
+
+&nbsp;&nbsp;
+
+<button onclick="Reset()" id="Reset">Reset</button>
+
+&nbsp;&nbsp;
+
+<button onclick="Apply()" id="Apply">Apply</button>
+
+<br><br>
+
+Red（0~255）:<br><input type="range" id="r" min="-255" max="255" step="1" value="0"> <br>
+
+Green（0~255）:<br><input type="range" id="g" min="-255" max="255" step="1" value="0"> <br>
+
+Blue（0~255）:<br><input type="range" id="b" min="-255" max="255" step="1" value="0"> <br>
+
+
+<script>
+const videoTag = document.getElementById("my-video");
+const HostPort = document.getElementById("HostPort").innerHTML;
+const r = document.getElementById("r");
+const g = document.getElementById("g");
+const b = document.getElementById("b");
+const Source = document.getElementById("Source");
+const Height = document.getElementById("Height");
+const Width = document.getElementById("Width");
+let src,h,w,tt,tim = 0;
+let myMediaSource = new MediaSource();
+let SourceBuffer;
+let datas;
+let url; 
+let ArrayBufferResult;
+let mimeCodec = 'video/mp4; codecs="avc1.42E01E"';
+/*mimeCodec = 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"'; /* 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"' */
+
+// stream video 編號 延遲
+let delay = 2;
+
+// 直播當前時間點
+let i = 2;
+
+// setInterval(should_I_Append,100);
+let ViewVideoTime ;
+
+//如果影片目前時間點和直播時間點差太多，就跳去直播時間點。詳情請見 FetchAB(url)
+let detectSecond = 0.5;
+
+//串流影片名稱與「時間 Time」的對應和請求方式，詳情請見 should_I_Append()
+let t = -1;
+
+function shutdown(){}
+function FetchAB(url){
+    try{
+        fetch(url, {method: 'GET',})
+    	    .then(function(response){return response.arrayBuffer();})
+    		.then( (data)=>{datas=data
+			                //如果影片目前時間點和直播時間點差太多，就跳去直播時間點。
+			                if(i-videoTag.currentTime>detectSecond){videoTag.currentTime=i}
+			                SourceBuffer.timestampOffset = i;
+			                SourceBuffer.appendBuffer(data);
+							// 每段buffer影片間隔是0.1秒
+	                        i+=0.1;}) 
+		}			
+	catch(error){
+        console.log(error);
+        console.log(1); 		
+		}
+}
+
+
+function Video(){
+    //初始化 Video		
+    url = URL.createObjectURL(myMediaSource);
+    videoTag.src = url;
+	
+    myMediaSource.addEventListener('sourceopen', ()=>{
+    SourceBuffer = myMediaSource.addSourceBuffer(mimeCodec);
+	ViewVideoTime = setInterval(should_I_Append,50);
+	videoTag.play();
+	document.body.click()
+    } );
+		
+}
+
+function should_I_Append(){
+      //串流影片名稱與時間的對應和請求方式
+      a=new Date().getMilliseconds();a=(a-a%100)/100
+	  tt = a
+	  if(tt>t || (tt==0 && t==9)){
+	  //if((i-10)>0){SourceBuffer.remove(i-10,i-5)}
+	  t = tt;
+	  //console.log(t);console.log(tt);
+	  // tim是mp4檔案的編號
+	  if(t>=delay){tim = t-delay;}
+	  else{tim=10+t-delay;}
+	  ///////////////////////////////////////////////////////////////////////////////////////////////
+      FetchAB("http://"+HostPort+"/videos/"+tim);}
+} 
+
+function video_size(){
+    h = document.getElementById("h").innerHTML;
+    w = document.getElementById("w").innerHTML;
+      
+    h = parseInt(h, 10);
+    w = parseInt(w, 10);
+    //w是h的幾倍，h乘以多少會變成w
+    scale = w/h;
+    
+    h = (window.innerHeight)*2/3;
+    w = h*scale;
+    
+    h = parseInt(h, 10);
+    w = parseInt(w, 10);
+    
+    Height.value = h;
+    Width.value = w;
+    videoTag.height = Height.value;
+    videoTag.width = Width.value;
+     videoTag.height = 600;
+    videoTag.width =600; 
+}
+
+function chg(str){
+    var oReq = new XMLHttpRequest();
+    oReq.open("GET", "http://"+HostPort+"/RGB/"+str);
+    oReq.send(null);
+}
+
+Video(); 
+video_size(); 
+r.onchange=()=>{chg("r_"+r.value)};
+g.onchange=()=>{chg("g_"+g.value)};
+b.onchange=()=>{chg("b_"+b.value)};
+
+ 
+function stream(){
+  //跳去直播時間點。
+  videoTag.currentTime=i;
+}
+
+function Play(){
+  videoTag.play();
+}
+
+function Stop(){
+  clearInterval(ViewVideoTime);
+  myMediaSource.endOfStream(); 
+}  
+
+function Pause(){
+  videoTag.pause();  
+}
+
+function Reset(){
+  video_size(); 
+  r.value = 0;
+  g.value = 0;
+  b.value = 0;  
+  chg("r_"+r.value);
+  chg("g_"+g.value);
+  chg("b_"+b.value);
+  }
+function Apply(){
+  try{
+    videoTag.height = Height.value;
+    videoTag.width = Width.value;  }
+  catch(err){
+  }
+}   
+  
+</script>
+</body>
