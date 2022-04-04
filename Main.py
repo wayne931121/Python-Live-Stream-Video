@@ -16,7 +16,8 @@ import MediaRecorder # 2. Record Video to Http Server via ffmpeg
 
 
 CameraIsOpen = Value("i", 1)
-img, imgInfo, height, width, flag, r, g, b = [0]*8
+img, imgInfo, height, width, flag, r, g, b, videos = [0]*9
+max_file = 10
 
 # In[ ]:
 
@@ -67,6 +68,8 @@ def getInfo():
     r.buf[0:5]=b"+0000"
     g.buf[0:5]=b"+0000"
     b.buf[0:5]=b"+0000"
+    
+    videos = [shared_memory.SharedMemory(create=True, size=500*1024, name=("video"+str(_)) ) for _ in range(max_file)] # 500 kb
 
 
 # In[ ]:
@@ -117,9 +120,22 @@ def main():
       b.close()
       b.unlink()
       
+      for _ in videos :
+          _.close()
+          _.unlink()
+          
+          
       camera.terminate()
       recorder.terminate()
       httpserver.terminate()
+      
+      camera.join()
+      recorder.join()
+      httpserver.join()
+      
+      camera.close()
+      recorder.close()
+      httpserver.close()
       
       print("\nFinish\n")
 

@@ -28,7 +28,7 @@ def main():
     imgInfo.close()   
 
     def command(num):
-        return r'ffmpeg -y -f rawvideo -c:v rawvideo -s {}x{} -pix_fmt bgr24 -r {} -i - -t 0.1 -c:v libx264 -b:v 5000k -pix_fmt yuv420p -movflags frag_keyframe+empty_moov+default_base_moof -f mp4 {}\tmp\videos\{}.mp4'.format(info[1] ,info[0] ,fps , pwd, num)
+        return r'ffmpeg -y -f rawvideo -c:v rawvideo -s {}x{} -pix_fmt bgr24 -r {} -i - -t 0.1 -c:v libx264 -b:v 5000k -pix_fmt yuv420p -movflags frag_keyframe+empty_moov+default_base_moof -tune zerolatency -preset veryfast -f mp4 pipe:1 | python {}\recv\{}.py'.format(info[1] ,info[0] ,fps , pwd, num)
     
 
     
