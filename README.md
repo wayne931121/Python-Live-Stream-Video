@@ -36,3 +36,24 @@ ffmpeg (要設環境變數)
 python : (詳情可見setup.bat)
     opencv
     flask
+
+
+#即時串流伺服器功能，不過是非常簡易版的。
+
+#目前尚未支援音訊串流，有時間可能會去做
+
+環境需求詳細:
+
+ffmpeg安裝:
+https://www.ffmpeg.org/download.html
+
+python安裝:
+https://www.python.org/downloads/
+
+flask、opencv安裝:
+pip install opencv-python==3.4.16.57
+
+pip install flask
+
+DroidCam安裝:
+https://www.dev47apps.com/
