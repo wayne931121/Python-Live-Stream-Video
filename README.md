@@ -23,6 +23,8 @@ Python Flask Http Server >>
 << Client Browser Javascript Ajax >>
 Html Video >> User Screen
 
+執行:
+windows cmd> run.bat
 
 環境配置需求
 
